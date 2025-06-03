@@ -1,6 +1,10 @@
-Token.cpp
-Lexer.cpp
-SourceLocation.cpp
-Token.h
-Lexer.h
-SourceLocation.h
+CMakeFiles/
+.cache/
+
+*.cmake
+Makefile
+*.json
+*.log
+
+vlex
+CMakeCache.txt
