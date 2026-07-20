@@ -59,9 +59,11 @@ function(vlex_generate target cfg src inc)
         message(FATAL_ERROR "Unknown VLEX_FILE_NAME_STYLE: ${VLEX_FILE_NAME_STYLE}")
     endif()
 
-    set(lexer ${VLEX_FILE_PREFIX}${lexer})
-    set(token ${VLEX_FILE_PREFIX}${token})
-    set(source_location ${VLEX_FILE_PREFIX}${source_location})
+    if (NOT VLEX_FILE_PREFIX STREQUAL "__noprefix__")
+        set(lexer ${VLEX_FILE_PREFIX}${lexer})
+        set(token ${VLEX_FILE_PREFIX}${token})
+        set(source_location ${VLEX_FILE_PREFIX}${source_location})
+    endif()
 
     get_target_property(working_dir ${target} SOURCE_DIR)
 
