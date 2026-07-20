@@ -666,6 +666,7 @@ namespace {}{}lexer
             {"-=", "MinusEqual"},
             {"*=", "StarEqual"},
             {"/=", "SlashEqual"},
+            {"%=", "PercentEqual"},
             {"|=", "PipeEqual"},
             {"&=", "AmpersandEqual"},
             {"->", "RightArrow"},
