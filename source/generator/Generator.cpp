@@ -34,8 +34,73 @@ namespace english {
 
 namespace generator
 {
-    Generator::Generator(std::string mNamespaceName, std::vector<parser::TokenDescriptor> symbols, std::vector<parser::TokenDescriptor> keywords, std::vector<parser::TokenDescriptor> specials, std::vector<parser::CommentDescriptor> comments)
-        : mNamespaceName(std::move(mNamespaceName))    
+    std::string NamingPolicy::fileName(Identifier id, std::optional<std::string_view> ext) const {
+        std::string out = fileNamePrefix + Format(GetWords(id), fileNameConvention);
+        if (ext.has_value()) out += ext.value();
+        return out;
+    }
+
+    std::string NamingPolicy::className(Identifier id) const {
+        return classNamePrefix + Format(GetWords(id), classNameConvention);
+    }
+
+    NamingPolicy::Convention NamingPolicy::ConventionFromName(std::string_view name) {
+        if (name == "snake_case") {
+            return Convention::SnakeCase;
+        } else if (name == "PascalCase") {
+            return Convention::PascalCase;
+        } else {
+            std::exit(1);
+        }
+    }
+
+    std::span<const std::string_view> NamingPolicy::GetWords(Identifier id) {
+        constexpr static std::string_view lexerWords[] = {"lexer"};
+        constexpr static std::string_view tokenWords[] = {"token"};
+        constexpr static std::string_view sourceLocationWords[] = {"source", "location"};
+
+        switch (id) {
+            case Identifier::Lexer:
+                return lexerWords;
+            case Identifier::Token:
+                return tokenWords;
+            case Identifier::SourceLocation:
+                return sourceLocationWords;
+        }
+
+        std::exit(1);
+    }
+
+    std::string NamingPolicy::Format(std::span<const std::string_view> words, Convention convention) {
+        if (words.empty()) return "";
+
+        std::string out;
+
+        switch (convention) {
+            case Convention::SnakeCase:
+                for (std::string_view word : words) {
+                    out += word;
+                    out += '_';
+                }
+                out.erase(0, 1);
+                std::ranges::transform(out, out.begin(), [](char c) { return std::tolower(c); });
+                break;
+            case Convention::PascalCase:
+                for (std::string_view word : words) {
+                    out.reserve(out.size() + word.size());
+                    out += static_cast<char>(std::toupper(word[0]));
+                    for (auto it = word.begin() + 1; it != word.end(); ++it) {
+                        out += static_cast<char>(std::tolower(*it));
+                    }
+                }
+                break;
+        }
+
+        return out;
+    }
+
+    Generator::Generator(std::string namespaceName, std::vector<parser::TokenDescriptor> symbols, std::vector<parser::TokenDescriptor> keywords, std::vector<parser::TokenDescriptor> specials, std::vector<parser::CommentDescriptor> comments)
+        : mNamespaceName(std::move(namespaceName))
         , mSymbols(std::move(symbols))
         , mKeywords(std::move(keywords))
         , mSpecials(std::move(specials))
@@ -122,7 +187,7 @@ namespace generator
         }
     }
 
-    void Generator::generate(std::filesystem::path outsource, std::filesystem::path outinc)
+    void Generator::generate(std::filesystem::path outsource, std::filesystem::path outinc, const NamingPolicy& namingPolicy)
     {
         if (!std::filesystem::exists(outsource))
         {
@@ -133,42 +198,41 @@ namespace generator
             std::filesystem::create_directories(outinc);
         }
 
-        generateSourceLocation(outsource, outinc);
-        generateToken(outsource, outinc);
-        generateLexer(outsource, outinc);
+        generateSourceLocation(outsource, outinc, namingPolicy);
+        generateToken(outsource, outinc, namingPolicy);
+        generateLexer(outsource, outinc, namingPolicy);
 
         std::filesystem::remove(outinc / ".gitignore");
         std::filesystem::remove(outsource / ".gitignore");
 
         std::ofstream incGitignore = std::ofstream(outinc / ".gitignore", std::ios::app);
-        incGitignore << R"(Token.h
-Lexer.h
-SourceLocation.h
-)";
+        incGitignore << namingPolicy.fileName(NamingPolicy::Identifier::Lexer, ".h") << '\n';
+        incGitignore << namingPolicy.fileName(NamingPolicy::Identifier::Token, ".h") << '\n';
+        incGitignore << namingPolicy.fileName(NamingPolicy::Identifier::SourceLocation, ".h") << '\n';
+
         std::ofstream srcGitignore = std::ofstream(outsource / ".gitignore", std::ios::app);
-        srcGitignore << R"(Token.cpp
-Lexer.cpp
-SourceLocation.cpp
-)";
+        srcGitignore << namingPolicy.fileName(NamingPolicy::Identifier::Lexer, ".cpp") << '\n';
+        srcGitignore << namingPolicy.fileName(NamingPolicy::Identifier::Token, ".cpp") << '\n';
+        srcGitignore << namingPolicy.fileName(NamingPolicy::Identifier::SourceLocation, ".cpp") << '\n';
     }
 
-    void Generator::generateSourceLocation(std::filesystem::path outsource, std::filesystem::path outinc)
+    void Generator::generateSourceLocation(std::filesystem::path outsource, std::filesystem::path outinc, const NamingPolicy& namingPolicy)
     {
-        std::ofstream sourceLocationH = std::ofstream(outinc / "SourceLocation.h");
+        std::ofstream sourceLocationH = std::ofstream(outinc / namingPolicy.fileName(NamingPolicy::Identifier::SourceLocation, ".h"));
         std::string_view namespaceQualifier = mNamespaceName.empty() ? "" : "::";
 
         sourceLocationH << std::vformat(templates::SourceLocationH, std::make_format_args(mNamespaceName, namespaceQualifier));
         sourceLocationH.close();
 
-        std::ofstream sourceLocationCPP = std::ofstream(outsource / "SourceLocation.cpp");
-        sourceLocationCPP << std::format("#include \"{}\"\n", (outinc / "SourceLocation.h").string());
+        std::ofstream sourceLocationCPP = std::ofstream(outsource / namingPolicy.fileName(NamingPolicy::Identifier::SourceLocation, ".cpp"));
+        sourceLocationCPP << std::format("#include \"{}\"\n", (outinc / namingPolicy.fileName(NamingPolicy::Identifier::SourceLocation, ".h")).string());
         sourceLocationCPP << std::vformat(templates::SourceLocationCPP, std::make_format_args(mNamespaceName, namespaceQualifier));
         sourceLocationCPP.close();
     }
 
-    void Generator::generateToken(std::filesystem::path outsource, std::filesystem::path outinc)
+    void Generator::generateToken(std::filesystem::path outsource, std::filesystem::path outinc, const NamingPolicy& namingPolicy)
     {
-        std::ofstream tokenH = std::ofstream(outinc / "Token.h");
+        std::ofstream tokenH = std::ofstream(outinc / namingPolicy.fileName(NamingPolicy::Identifier::Token, ".h"));
         tokenH << std::format(R"(#ifndef VLEX_GENERATED_LEXER_TOKEN_H
 #define VLEX_GENERATED_LEXER_TOKEN_H
 
@@ -180,7 +244,7 @@ namespace {}{}lexer
 {{
     enum class TokenType
     {{
-)", (outinc / "SourceLocation.h").string(), mNamespaceName, mNamespaceName.empty() ? "" : "::");
+)", (outinc / namingPolicy.fileName(NamingPolicy::Identifier::SourceLocation, ".h")).string(), mNamespaceName, mNamespaceName.empty() ? "" : "::");
 
         std::vector<std::string> tokenTypes;
         for (auto& keyword : mKeywords)
@@ -256,8 +320,8 @@ namespace {}{}lexer
         tokenH.close();
 
 
-        std::ofstream tokenCPP = std::ofstream(outsource / "Token.cpp");
-        tokenCPP << std::format("#include \"{}\"\n", (outinc / "Token.h").string());
+        std::ofstream tokenCPP = std::ofstream(outsource / namingPolicy.fileName(NamingPolicy::Identifier::Token, ".cpp"));
+        tokenCPP << std::format("#include \"{}\"\n", (outinc / namingPolicy.fileName(NamingPolicy::Identifier::Token, ".h")).string());
 
         std::unordered_map<std::string, std::string> names;
 
@@ -437,24 +501,24 @@ namespace {}{}lexer
         tokenCPP.close();
     }
 
-    void Generator::generateLexer(std::filesystem::path outsource, std::filesystem::path outinc)
+    void Generator::generateLexer(std::filesystem::path outsource, std::filesystem::path outinc, const NamingPolicy& namingPolicy)
     {
-        std::ofstream lexerH = std::ofstream(outinc / "Lexer.h");
+        std::ofstream lexerH = std::ofstream(outinc / namingPolicy.fileName(NamingPolicy::Identifier::Lexer, ".h"));
         std::string_view namespaceQualifier = mNamespaceName.empty() ? "" : "::";
 
         lexerH << std::format(R"(#ifndef VLEX_GENERATED_LEXER_LEXER_H
 #define VLEX_GENERATED_LEXER_LEXER_H 1
 
 #include "{}"
-)", (outinc / "SourceLocation.h").string());
+)", (outinc / namingPolicy.fileName(NamingPolicy::Identifier::SourceLocation, ".h")).string());
         lexerH << std::vformat(templates::LexerH, std::make_format_args(mNamespaceName, namespaceQualifier));
         lexerH.close();
 
 
-        std::ofstream lexerCPP = std::ofstream(outsource / "Lexer.cpp");
+        std::ofstream lexerCPP = std::ofstream(outsource / namingPolicy.fileName(NamingPolicy::Identifier::Lexer, ".cpp"));
         lexerCPP << std::format(R"(#include "{}"
 #include "{}"
-)", (outinc / "Lexer.h").string(), (outinc / "Token.h").string());
+)", (outinc / namingPolicy.fileName(NamingPolicy::Identifier::Lexer, ".h")).string(), (outinc / namingPolicy.fileName(NamingPolicy::Identifier::Token, ".h")).string());
         lexerCPP << std::vformat(templates::Lexer1CPP, std::make_format_args(mNamespaceName, namespaceQualifier));
 
         for (auto& keyword : mKeywords)

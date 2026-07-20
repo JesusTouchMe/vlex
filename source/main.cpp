@@ -15,7 +15,7 @@
 
 int main(int argc, char** argv)
 {
-    if (argc < 4)
+    if (argc < 8)
     {
         std::ofstream log("vlex.log");
         log << "vlex: incorrect input\n";
@@ -44,6 +44,14 @@ int main(int argc, char** argv)
     parser::Parser parser(std::move(tokens), diag);
     parser.parse();
 
+    generator::NamingPolicy policy;
+    policy.fileNamePrefix = argv[5];
+    policy.fileNameConvention = generator::NamingPolicy::ConventionFromName(argv[4]);
+    policy.fileNamePrefix = argv[7];
+    policy.classNameConvention = generator::NamingPolicy::ConventionFromName(argv[6]);
+
     auto generator = generator::Generator(parser.getNamespaceName(), parser.getSymbols(), parser.getKeywords(), parser.getSpecials(), parser.getComments());
-    generator.generate(argv[2], argv[3]);
+    generator.generate(argv[2], argv[3], policy);
+
+    return 0;
 }
