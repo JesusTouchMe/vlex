@@ -40,7 +40,7 @@ function(vlex_generate target cfg src inc)
     cmake_parse_arguments(VLEX "" "${oneValueArgs}" "" ${ARGN})
 
     if (NOT VLEX_FILE_NAME_STYLE)
-        set(VLEX_NAME_STYLE "PascalCase")
+        set(VLEX_FILE_NAME_STYLE "PascalCase")
     endif()
 
     if (NOT VLEX_FILE_PREFIX)
