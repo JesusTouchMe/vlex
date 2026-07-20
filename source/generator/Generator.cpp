@@ -34,6 +34,13 @@ namespace english {
 
 namespace generator
 {
+    void NamingPolicy::fixPrefixes() {
+        constexpr std::string_view noPrefix = "__noprefix__";
+
+        if (fileNamePrefix == noPrefix) fileNamePrefix = "";
+        if (classNamePrefix == noPrefix) classNamePrefix = "";
+    }
+
     std::string NamingPolicy::fileName(Identifier id, std::optional<std::string_view> ext) const {
         std::string out = fileNamePrefix + Format(GetWords(id), fileNameConvention);
         if (ext.has_value()) out += ext.value();

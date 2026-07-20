@@ -50,6 +50,8 @@ int main(int argc, char** argv)
     policy.fileNamePrefix = argv[7];
     policy.classNameConvention = generator::NamingPolicy::ConventionFromName(argv[6]);
 
+    policy.fixPrefixes();
+
     auto generator = generator::Generator(parser.getNamespaceName(), parser.getSymbols(), parser.getKeywords(), parser.getSpecials(), parser.getComments());
     generator.generate(argv[2], argv[3], policy);
 

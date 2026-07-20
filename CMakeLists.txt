@@ -44,7 +44,7 @@ function(vlex_generate target cfg src inc)
     endif()
 
     if (NOT VLEX_FILE_PREFIX)
-        set(VLEX_FILE_PREFIX "")
+        set(VLEX_FILE_PREFIX "__noprefix__")
     endif()
 
     if (VLEX_FILE_NAME_STYLE STREQUAL "snake_case")
@@ -79,7 +79,7 @@ function(vlex_generate target cfg src inc)
         OUTPUT ${inc}/${lexer}.h ${src}/${lexer}.cpp ${inc}/${source_location}.h ${src}/${source_location}.cpp ${inc}/${token}.h ${src}/${token}.cpp
         PRE_BUILD
         DEPENDS ${cfg}
-        COMMAND vlex ${cfg} ${src} ${inc} ${VLEX_FILE_NAME_STYLE} ${VLEX_FILE_PREFIX} PascalCase ""
+        COMMAND vlex ${cfg} ${src} ${inc} ${VLEX_FILE_NAME_STYLE} ${VLEX_FILE_PREFIX} PascalCase __noprefix__
         WORKING_DIRECTORY ${working_dir}
     )
     target_sources(${target} PRIVATE ${inc}/${lexer}.h ${src}/${lexer}.cpp ${inc}/${source_location}.h ${src}/${source_location}.cpp ${inc}/${token}.h ${src}/${token}.cpp)

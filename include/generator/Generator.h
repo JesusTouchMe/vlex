@@ -37,6 +37,8 @@ namespace generator
         std::string classNamePrefix;
         Convention classNameConvention;
 
+        void fixPrefixes();
+
         std::string fileName(Identifier id, std::optional<std::string_view> ext = std::nullopt) const;
         std::string className(Identifier id) const;
 
