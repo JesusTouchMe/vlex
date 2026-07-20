@@ -89,7 +89,7 @@ namespace generator
                     out += word;
                     out += '_';
                 }
-                out.erase(0, 1);
+                out.pop_back();
                 std::ranges::transform(out, out.begin(), [](char c) { return std::tolower(c); });
                 break;
             case Convention::PascalCase:
